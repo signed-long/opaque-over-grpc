@@ -1,16 +1,12 @@
-FROM golang:1.17-alpine
+FROM golang:1.17 AS builder
 
 WORKDIR /app
 
-COPY ./opaque-client/go.mod ./
-COPY ./opaque-client/go.sum ./
+COPY ./opaque-client ./opaque-client
+COPY ./opaque-service-protos ./opaque-service-protos
 
-RUN go mod download
+WORKDIR /app/opaque-client
 
-COPY ./opaque-client /app
-COPY ./opaque-service-protos /app
+RUN go mod download 
 
-RUN cd ./opaque-client
-RUN go build -o /opaque-client
-
-CMD [ "/bin/bash" ]
+RUN go build -o ./opaque-client-binary

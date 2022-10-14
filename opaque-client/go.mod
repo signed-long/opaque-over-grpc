@@ -2,6 +2,8 @@ module github.com/signed-long/opaque-over-grpc/opaque-client
 
 go 1.17
 
+replace github.com/signed-long/opaque-over-grpc/opaque-service-protos v0.0.0 => ../opaque-service-protos
+
 require (
 	github.com/cretz/gopaque v0.1.0
 	github.com/signed-long/opaque-over-grpc/opaque-service-protos v0.0.0

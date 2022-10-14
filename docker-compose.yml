@@ -5,12 +5,8 @@ services:
       context: ./
       dockerfile: ./opaque-client/Dockerfile
     image: opauqe-client-img
-    environment:
-      - FLASK_APP=app/__init__.py
-  # db:
-  #   image: postgres:13-alpine
-  #   container_name: db
-  #   environment:
-  #     - POSTGRES_USER=test_db
-  #     - POSTGRES_PASSWORD=test_db
-  #     - POSTGRES_DB=test_db
+  server:
+    build:
+      context: ./
+      dockerfile: ./opaque-server/Dockerfile
+    image: opauqe-server-img

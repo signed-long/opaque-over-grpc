@@ -1,4 +1,4 @@
-module github.com/signed-long/opaque-over-grpc/protos
+module github.com/signed-long/opaque-over-grpc/opaque-service-protos
 
 go 1.17
 

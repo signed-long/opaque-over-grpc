@@ -8,11 +8,8 @@ import (
 	opaque "github.com/signed-long/opaque-over-grpc/opaque-client/client_auth"
 )
 
-func HandleReg(regCommand *flag.FlagSet, help *bool, authServiceClient opaque.AuthServiceClient) {
+func HandleReg(regCommand *flag.FlagSet, authServiceClient opaque.AuthServiceClient) {
 	regCommand.Parse(os.Args[2:])
-	if *help {
-		printAndQuit("This is a help message for the reg command")
-	}
 
 	fmt.Println("Enter a username and password to register")
 
