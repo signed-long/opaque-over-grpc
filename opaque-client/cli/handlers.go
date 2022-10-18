@@ -13,20 +13,10 @@ func HandleReg(regCommand *flag.FlagSet, authServiceClient opaque.AuthServiceCli
 
 	fmt.Println("Enter a username and password to register")
 
-	msg := "email: "
-	email, err := sensitiveInput(msg)
-	if err != nil {
-		fmt.Println("Failed to read email")
-		os.Exit(1)
-	}
-	msg = "password: "
-	password, err := sensitiveInput(msg)
-	if err != nil {
-		fmt.Println("Failed to read password")
-		os.Exit(1)
-	}
+	var username, password string
+	login(&username, &password)
 
-	err = authServiceClient.RegisterFlow(email, password)
+	err := authServiceClient.RegisterFlow(username, password)
 	if err != nil {
 		// s, _ := status.FromError(err)
 		// if s.Code() == codes.AlreadyExists {

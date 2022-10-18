@@ -24,7 +24,7 @@ func NewAuthServiceClient(client protos.OpaqueAuthServiceClient, log logrus.Logg
 }
 
 func (svc *AuthServiceClient) RegisterFlow(
-	email string, password string) error {
+	username string, password string) error {
 
 	svc.log.Debug("Starting register flow")
 	src, err := svc.client.OpaqueRegistrationFlowRPC(context.Background())
@@ -33,14 +33,15 @@ func (svc *AuthServiceClient) RegisterFlow(
 	}
 
 	svc.log.Debug("Sending INIT")
-	b64UserRegInit, userReg, err := OpaqueRegisterInit(email, password)
+	b64UserRegInit, userReg, err := OpaqueRegisterInit(username, password)
 	if err != nil {
 		svc.log.Error("Error creating b64UserRegInit")
 		return err
 	}
 	req := protos.RegistrationFlowMsg{
 		Step:           protos.RegistrationFlowSteps_INIT,
-		GopaqueTypeGob: b64UserRegInit}
+		GopaqueTypeGob: b64UserRegInit,
+		UserID:         username}
 	err = src.Send(&req)
 	if err == io.EOF {
 		svc.log.Debug("Server closed connection")
@@ -53,7 +54,7 @@ func (svc *AuthServiceClient) RegisterFlow(
 
 	for {
 		svc.log.Debug("Waiting for response from server")
-		req, err := src.Recv()
+		res, err := src.Recv()
 		if err == io.EOF {
 			svc.log.Debug("Server closed connection")
 			return err
@@ -63,7 +64,7 @@ func (svc *AuthServiceClient) RegisterFlow(
 			return err
 		}
 
-		switch req.GetStep() {
+		switch res.GetStep() {
 		case protos.RegistrationFlowSteps(
 			protos.RegistrationFlowSteps_value["INIT_ACK"]):
 
@@ -74,10 +75,10 @@ func (svc *AuthServiceClient) RegisterFlow(
 				return err
 			}
 
-			b64UserRegComplete, err := OpaqueRegisterComplete(userReg, req)
+			b64UserRegComplete, err := OpaqueRegisterComplete(userReg, res)
 
 			svc.log.Debug("Sending COMPLETE")
-			req := protos.RegistrationFlowMsg{Step: protos.RegistrationFlowSteps_COMPLETE, GopaqueTypeGob: b64UserRegComplete}
+			req := protos.RegistrationFlowMsg{Step: protos.RegistrationFlowSteps_COMPLETE, GopaqueTypeGob: b64UserRegComplete, UserID: res.GetUserID()}
 			err = src.Send(&req)
 			if err != nil {
 				svc.log.Error("Error sending COMPLETE: ", err)

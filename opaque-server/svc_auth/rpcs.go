@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/cretz/gopaque/gopaque"
+	"github.com/google/uuid"
 	protos "github.com/signed-long/opaque-over-grpc/opaque-service-protos/protos"
 	logrus "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -28,6 +29,7 @@ func (svc *AuthServiceServer) OpaqueRegistrationFlowRPC(
 	src protos.OpaqueAuthService_OpaqueRegistrationFlowRPCServer) error {
 
 	var registerSessions = map[string]*gopaque.ServerRegister{}
+	var username string
 	for {
 		req, err := src.Recv()
 		if err == io.EOF {
@@ -38,25 +40,18 @@ func (svc *AuthServiceServer) OpaqueRegistrationFlowRPC(
 			svc.log.Error("Unable to read from client: ", err)
 			return err
 		}
+		svc.log.Info("req.GetStep() " + req.GetStep().String())
+		svc.log.Info("username" + username)
 
 		switch req.GetStep() {
 		case protos.RegistrationFlowSteps(
 			protos.RegistrationFlowSteps_value["INIT"]):
 
 			svc.log.Info("INIT request received")
-
-			// Check if there is a session for this user
-			if registerSessions[req.GetUserID()] != nil {
-				svc.log.Warn("Multiple INITs received in same stream.")
-				err := status.Errorf(
-					codes.FailedPrecondition,
-					"No registration session found",
-				)
-				return err
-			}
+			username = req.GetUserID()
 
 			// Check if user already exists TODO: lookup in db
-			if registeredUsers[req.GetUserID()] != nil {
+			if registeredUsers[username] != nil {
 				errMsg := "User already Exists"
 				svc.log.Error(errMsg)
 				err := status.Errorf(
@@ -71,11 +66,12 @@ func (svc *AuthServiceServer) OpaqueRegistrationFlowRPC(
 				return err
 			}
 
-			registerSessions[req.GetUserID()] = &serverReg
+			sessionID := uuid.New()
+			registerSessions[sessionID.String()] = &serverReg
 			svc.log.Info("Registration session created")
 
 			svc.log.Debug("Sending INIT_ACK")
-			res := protos.RegistrationFlowMsg{Step: protos.RegistrationFlowSteps_INIT_ACK, GopaqueTypeGob: b64ServerRegInit}
+			res := protos.RegistrationFlowMsg{Step: protos.RegistrationFlowSteps_INIT_ACK, GopaqueTypeGob: b64ServerRegInit, UserID: sessionID.String()}
 			err = src.Send(&res)
 			if err != nil {
 				return err
@@ -84,9 +80,13 @@ func (svc *AuthServiceServer) OpaqueRegistrationFlowRPC(
 		case protos.RegistrationFlowSteps(
 			protos.RegistrationFlowSteps_value["COMPLETE"]):
 
+			sessionID := req.GetUserID()
+
+			svc.log.Info("sessionID" + sessionID)
+
 			svc.log.Info("COMPLETE request received")
-			// Check if there is a session for this user TODO: streaming will remove dependency on this
-			if registerSessions[req.GetUserID()] == nil {
+			// Check if there is a session for this user
+			if registerSessions[sessionID] == nil {
 				svc.log.Error("No registration session found")
 				err := status.Errorf(
 					codes.FailedPrecondition,
@@ -95,7 +95,7 @@ func (svc *AuthServiceServer) OpaqueRegistrationFlowRPC(
 				return err
 			}
 
-			serverReg := *registerSessions[req.GetUserID()]
+			serverReg := *registerSessions[sessionID]
 			regComplete, err := svc.OpaqueRegisterComplete(req, serverReg)
 			if err != nil {
 				svc.log.Error("Error completing registration:", err)
@@ -103,8 +103,8 @@ func (svc *AuthServiceServer) OpaqueRegistrationFlowRPC(
 			}
 
 			svc.log.Info("Storing new user")
-			registeredUsers[req.GetUserID()] = &regComplete
-			delete(registerSessions, req.GetUserID())
+			registeredUsers[username] = &regComplete
+			delete(registerSessions, sessionID)
 			svc.log.Info("User stored")
 
 			svc.log.Debug("Sending COMPLETE_ACK")

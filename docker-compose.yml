@@ -1,12 +1,14 @@
 version: '3.3'
 services:
-  client:
-    build:
-      context: ./
-      dockerfile: ./opaque-client/Dockerfile
-    image: opauqe-client-img
+  # client:
+  #   build:
+  #     context: ./
+  #     dockerfile: ./opaque-client/Dockerfile
+  #   image: opauqe-client-img
   server:
     build:
       context: ./
       dockerfile: ./opaque-server/Dockerfile
+    ports:
+      - "8080:8080"
     image: opauqe-server-img

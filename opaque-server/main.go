@@ -25,7 +25,7 @@ func main() {
 
 	reflection.Register(grpcServer) // TODO: turn this off with config DEBUG
 
-	l, err := net.Listen("tcp", "localhost:8080")
+	l, err := net.Listen("tcp", "0.0.0.0:8080")
 	if err != nil {
 		log.Fatal("Unable to listen error: ", err)
 	}
